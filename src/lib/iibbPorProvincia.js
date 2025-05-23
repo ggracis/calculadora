@@ -1,0 +1,28 @@
+// src/lib/iibbPorProvincia.js
+// Puedes editar estos valores según la tabla oficial
+export const IIBB_POR_PROVINCIA = {
+  "Buenos Aires": 0.035,
+  CABA: 0.035,
+  Catamarca: 0.035,
+  Chaco: 0.035,
+  Chubut: 0.035,
+  Córdoba: 0.035,
+  Corrientes: 0.035,
+  "Entre Ríos": 0.035,
+  Formosa: 0.035,
+  Jujuy: 0.035,
+  "La Pampa": 0.035,
+  "La Rioja": 0.035,
+  Mendoza: 0.035,
+  Misiones: 0.035,
+  Neuquén: 0.035,
+  "Río Negro": 0.035,
+  Salta: 0.035,
+  "San Juan": 0.035,
+  "San Luis": 0.035,
+  "Santa Cruz": 0.035,
+  "Santa Fe": 0.035,
+  "Santiago del Estero": 0.035,
+  "Tierra del Fuego": 0.035,
+  Tucumán: 0.035,
+};
