@@ -118,30 +118,22 @@ export default function App() {
         setResultado(null);
         return;
       }
-      // Obtener coeficiente y tasa IIBB según inscripción
       const { coeficiente, tasaIibb } = await getCoeficientes({
         provincia: form.provincia,
         programa: form.programa,
         inscripcion: form.inscripcion,
       });
-      // Validar coeficiente y tasaIibb
-      if (
-        isNaN(coeficiente) ||
-        isNaN(tasaIibb) ||
-        coeficiente === 1 // valor por defecto, combinación no encontrada
-      ) {
+      if (isNaN(coeficiente) || isNaN(tasaIibb) || coeficiente === 1) {
         setResultado({
           error:
             "No se encontró coeficiente para la provincia y programa seleccionados. Verifique los datos en el CSV o seleccione otra combinación.",
         });
         return;
       }
-      // Tasas del programa (del CSV globales)
       const tasaPrograma =
         form.programa === "3 Cuotas"
           ? parseFloat(globales.TASA_CFT_3_CUOTAS)
           : parseFloat(globales.TASA_CFT_6_CUOTAS);
-      // Validar tasaPrograma
       if (isNaN(tasaPrograma)) {
         setResultado({
           error:
@@ -149,39 +141,56 @@ export default function App() {
         });
         return;
       }
-      // Tasas fijas
-      const arancel = 0.018; // 1,8%
-      const porcentajeMunicipal = 0.01; // 1%
-      const ivaArancel = 0.21; // 21%
-      const ivaCostoFinanciero = 0.105; // 10,5%
-      const ivaRg = 0.03; // 3%
-      // ---
-      // LIQUIDACIÓN DE PAGO
-      // ---
-      // 1. Precio sugerido
+      const arancel = 0.018;
+      const porcentajeMunicipal = 0.01;
+      const ivaArancel = 0.21;
+      const ivaCostoFinanciero = 0.105;
+      const ivaRg = 0.03;
+      // --- LOGS DETALLADOS ---
+      console.log("\n--- CÁLCULO CUOTA SIMPLE ---");
+      console.log(`Precio contado: $${monto}`);
+      console.log(
+        `Coeficiente (${form.provincia}, ${form.programa}, ${form.inscripcion}): ${coeficiente}`
+      );
       const precioSugerido = monto * coeficiente;
-      // 2. Arancel 1,8%
+      console.log(
+        `Precio sugerido = ${monto} x ${coeficiente} = $${precioSugerido}`
+      );
       const arancel_1_8 = arancel * precioSugerido;
-      // 3. Costo financiero
+      console.log(
+        `Arancel 1,8% = ${arancel} x ${precioSugerido} = $${arancel_1_8}`
+      );
       const costoFinanciero = tasaPrograma * precioSugerido;
-      // 4. IVA arancel
+      console.log(
+        `Costo financiero (${(tasaPrograma * 100).toFixed(
+          2
+        )}%) = ${tasaPrograma} x ${precioSugerido} = $${costoFinanciero}`
+      );
       const ivaArancelMonto = ivaArancel * arancel_1_8;
-      // 5. IVA costo financiero
+      console.log(
+        `IVA arancel (21%) = ${ivaArancel} x ${arancel_1_8} = $${ivaArancelMonto}`
+      );
       const ivaCostoFinancieroMonto = costoFinanciero * ivaCostoFinanciero;
-      // 6. Subtotal
+      console.log(
+        `IVA costo financiero (10,5%) = ${ivaCostoFinanciero} x ${costoFinanciero} = $${ivaCostoFinancieroMonto}`
+      );
       const subtotal =
         precioSugerido -
         (arancel_1_8 +
           costoFinanciero +
           ivaArancelMonto +
           ivaCostoFinancieroMonto);
-      // 7. IVA RG 140/98 (3%)
+      console.log(
+        `Subtotal = ${precioSugerido} - (${arancel_1_8} + ${costoFinanciero} + ${ivaArancelMonto} + ${ivaCostoFinancieroMonto}) = $${subtotal}`
+      );
       const ivaRgMonto = subtotal * ivaRg;
-      // 8. Total cobrado en la liquidación
+      console.log(
+        `IVA RG 140/98 (3%) = ${subtotal} x ${ivaRg} = $${ivaRgMonto}`
+      );
       const totalCobradoLiquidacion = subtotal - ivaRgMonto;
-      // ---
-      // CÁLCULO DE IMPUESTOS
-      // ---
+      console.log(
+        `Total cobrado en la liquidación = ${subtotal} - ${ivaRgMonto} = $${totalCobradoLiquidacion}`
+      );
       let ventaNetaIva = 0,
         ivaDebito = 0,
         ivaCredito = 0,
@@ -190,28 +199,51 @@ export default function App() {
         tasaMunicipal = 0,
         iibb = 0;
       if (form.inscripcion === "Monotributista") {
-        // Monotributista
         iibb = precioSugerido * tasaIibb;
+        console.log(`IIBB = ${precioSugerido} x ${tasaIibb} = $${iibb}`);
         ventaNetaIva = 0;
         ivaDebito = 0;
         ivaCredito = 0;
         posicionIva = 0;
         saldoCobrado = totalCobradoLiquidacion - posicionIva;
+        console.log(
+          `Saldo cobrado (monotributo) = ${totalCobradoLiquidacion} - ${posicionIva} = $${saldoCobrado}`
+        );
         tasaMunicipal = precioSugerido * porcentajeMunicipal;
+        console.log(
+          `Tasa municipal = ${precioSugerido} x ${porcentajeMunicipal} = $${tasaMunicipal}`
+        );
       } else {
-        // Responsable Inscripto o Sociedad
         ventaNetaIva = precioSugerido;
         iibb = ventaNetaIva * tasaIibb;
+        console.log(`IIBB = ${ventaNetaIva} x ${tasaIibb} = $${iibb}`);
         ivaDebito = ventaNetaIva * 0.21;
         ivaCredito = ivaArancelMonto + ivaCostoFinancieroMonto + ivaRgMonto;
         posicionIva = ivaDebito - ivaCredito;
+        console.log(`IVA Débito = ${ventaNetaIva} x 0.21 = $${ivaDebito}`);
+        console.log(
+          `IVA Crédito = ${ivaArancelMonto} + ${ivaCostoFinancieroMonto} + ${ivaRgMonto} = $${ivaCredito}`
+        );
+        console.log(
+          `Posición IVA = ${ivaDebito} - ${ivaCredito} = $${posicionIva}`
+        );
         saldoCobrado = totalCobradoLiquidacion - posicionIva;
+        console.log(
+          `Saldo cobrado = ${totalCobradoLiquidacion} - ${posicionIva} = $${saldoCobrado}`
+        );
         tasaMunicipal = ventaNetaIva * porcentajeMunicipal;
+        console.log(
+          `Tasa municipal = ${ventaNetaIva} x ${porcentajeMunicipal} = $${tasaMunicipal}`
+        );
       }
-      // 9. Utilidad antes de costos
       const utilidadAntesDeCostos = saldoCobrado - tasaMunicipal - iibb;
-      // 10. Total descuento en pesos
+      console.log(
+        `Utilidad antes de costos = ${saldoCobrado} - ${tasaMunicipal} - ${iibb} = $${utilidadAntesDeCostos}`
+      );
       const totalDescuentoPesos = precioSugerido - monto;
+      console.log(
+        `Total de descuentos en pesos = ${precioSugerido} - ${monto} = $${totalDescuentoPesos}`
+      );
       // Formateo seguro (no mostrar NaN)
       function f(n) {
         if (typeof n !== "number" || isNaN(n)) return "-";
